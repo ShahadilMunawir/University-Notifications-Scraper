@@ -1,5 +1,7 @@
+import time
 import asyncio
 import requests
+import schedule
 from bs4 import BeautifulSoup
 from creds import TelegramBot, ChatID
 from telebot.async_telebot import AsyncTeleBot
@@ -9,10 +11,10 @@ bot = AsyncTeleBot(TelegramBot.API_KEY, parse_mode=None)
 
 @bot.message_handler(commands=["start"])
 async def start(msg):
-    if msg.chat.id != ChatID.CS:
-        await bot.send_message(msg.from_user.id, f"Hi, {msg.from_user.first_name}")
-    else:
-        await bot.reply_to(msg, "HI there, How is it going")
+    # if msg.chat.id != ChatID.CS:
+        # await bot.send_message(msg.from_user.id, f"Hi, {msg.from_user.first_name}")
+    # else:
+    await bot.reply_to(msg, "HI there, How is it going")
 
 @bot.message_handler(commands=["updates"])
 async def updates(msg):
@@ -29,16 +31,28 @@ async def updates(msg):
 
 @bot.message_handler(commands=["update"])
 def update(msg):
+    global flag
+    flag = 0
     while True:
         r = requests.get("https://pareekshabhavan.uoc.ac.in/index.php/examination/notifications", verify=False).content
         soup = BeautifulSoup(r, "html.parser")
-        file = open("updates.txt", "r")
-        notification_obj = soup.findAll("li", class_="notif")[0]
-        if str(msg.chat.id) == ChatID.CS:
-            if file.read() != notification_obj.text:
-                link = notification_obj.a["href"].replace(" ", "%").replace("15", "2015")
-                latest_notification = notification_obj.text
-                file = open("updates.txt", "w")
-                file.write(latest_notification)
-                bot.send_message(ChatID.CS, latest_notification+"\n"+link)
+        if flag == 0:
+            file = open("updates.txt", "r")
+            notification_obj = soup.findAll("li", class_="notif")[0]
+            if str(msg.chat.id) == ChatID.CS:
+                if file.read() != notification_obj.text:
+                    link = notification_obj.a["href"].replace(" ", "%").replace("15", "2015")
+                    latest_notification = notification_obj.text
+                    file = open("updates.txt", "w")
+                    file.write(latest_notification)
+                    bot.send_message(ChatID.CS, latest_notification+"\n"+link)
+        else:
+            break
+
+@bot.message_handler(commands=["stop"])
+async def stop(msg):
+    global flag
+    flag = 1
+    await bot.reply_to(msg, "Stopped")
+
 asyncio.run(bot.polling())
