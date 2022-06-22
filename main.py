@@ -1,3 +1,4 @@
+import time
 import asyncio
 import requests
 from bs4 import BeautifulSoup
@@ -41,4 +42,5 @@ def update(msg):
                 file = open("updates.txt", "w")
                 file.write(latest_notification)
                 bot.send_message(ChatID.CS, latest_notification+"\n"+link)
+                time.sleep(3600)
 asyncio.run(bot.polling())
