@@ -1,22 +1,22 @@
 import time
 import asyncio
 import requests
+import threading
 from bs4 import BeautifulSoup
 from creds import TelegramBot, ChatID
-from telebot.async_telebot import AsyncTeleBot
+import telebot
 
 flag = 0
-bot = AsyncTeleBot(TelegramBot.API_KEY, parse_mode=None)
+bot = telebot.TeleBot(TelegramBot.API_KEY, parse_mode=None)
 
 @bot.message_handler(commands=["start"])
-async def start(msg):
+def start(msg):
     if msg.chat.id != ChatID.CS:
-        await bot.send_message(msg.from_user.id, f"Hi, {msg.from_user.first_name}")
+        bot.send_message(msg.from_user.id, f"Hi, {msg.from_user.first_name}")
     else:
-        await bot.reply_to(msg, "HI there, How is it going")
-
+        bot.reply_to(msg, "HI there, How is it going")
 @bot.message_handler(commands=["updates"])
-async def updates(msg):
+def updates(msg):
     r = requests.get("https://pareekshabhavan.uoc.ac.in/index.php/examination/notifications", verify=False).content
     soup = BeautifulSoup(r, "html.parser")
     notification_objs = soup.findAll("li", class_="notif")[:5]
@@ -26,21 +26,34 @@ async def updates(msg):
             message += notification.text
         else:
             message += notification.text+"\n\n*"
-    await bot.reply_to(msg, message)
+    bot.reply_to(msg, message)
 
 @bot.message_handler(commands=["update"])
 def update(msg):
+    global flag
+    flag = 0
     while True:
-        r = requests.get("https://pareekshabhavan.uoc.ac.in/index.php/examination/notifications", verify=False).content
-        soup = BeautifulSoup(r, "html.parser")
-        file = open("updates.txt", "r")
-        notification_obj = soup.findAll("li", class_="notif")[0]
-        if str(msg.chat.id) == ChatID.CS:
-            if file.read() != notification_obj.text:
-                link = notification_obj.a["href"].replace(" ", "%").replace("15", "2015")
-                latest_notification = notification_obj.text
-                file = open("updates.txt", "w")
-                file.write(latest_notification)
-                bot.send_message(ChatID.CS, latest_notification+"\n"+link)
-                time.sleep(3600)
-asyncio.run(bot.polling())
+        if flag == 0:
+            r = requests.get("https://pareekshabhavan.uoc.ac.in/index.php/examination/notifications", verify=False).content
+            soup = BeautifulSoup(r, "html.parser")
+            file = open("updates.txt", "r")
+            notification_obj = soup.findAll("li", class_="notif")[0]
+            if str(msg.chat.id) == ChatID.CS:
+                if file.read() != notification_obj.text:
+                    link = notification_obj.a["href"].replace(" ", "%").replace("15", "2015")
+                    latest_notification = notification_obj.text
+                    file = open("updates.txt", "w")
+                    file.write(latest_notification)
+                    bot.send_message(ChatID.CS, latest_notification+"\n"+link)
+            # time.sleep(3600)
+        else:
+            break
+
+@bot.message_handler(commands=["stop"])
+def stop(msg):
+    global flag
+    flag = 1
+    bot.reply_to(msg, "I got stopped")
+threading.Thread(target=updates)
+threading.Thread(target=stop)
+bot.polling()
