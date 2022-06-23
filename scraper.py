@@ -1,12 +1,10 @@
-from selenium import webdriver
 import os
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
 
-chrome_options = webdriver.ChromeOptions()
-chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
-chrome_options.add_argument("--headless")
-chrome_options.add_argument("--disable-dev-shm-usage")
-chrome_options.add_argument("--no-sandbox")
-driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), chrome_options=chrome_options)
+options = Options()
+options.headless = True
+driver = webdriver.Firefox(options=options, executable_path=os.environ.get("GECKODRIVER_PATH"))
 while True:
     driver.get("http://results.uoc.ac.in/")
     table = driver.find_element(by="xpath", value='/html/body/span/div[2]/div[1]/div[2]/div/div/div/div[2]/div/table/tbody')
